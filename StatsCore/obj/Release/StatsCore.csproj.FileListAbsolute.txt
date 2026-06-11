@@ -1,0 +1,13 @@
+/home/justin/Code/REPO-Mods/StatsCore/StatsCore/obj/Release/StatsCore.csproj.AssemblyReference.cache
+/home/justin/Code/REPO-Mods/StatsCore/StatsCore/obj/Release/StatsCore.GeneratedMSBuildEditorConfig.editorconfig
+/home/justin/Code/REPO-Mods/StatsCore/StatsCore/obj/Release/StatsCore.AssemblyInfoInputs.cache
+/home/justin/Code/REPO-Mods/StatsCore/StatsCore/obj/Release/StatsCore.AssemblyInfo.cs
+/home/justin/Code/REPO-Mods/StatsCore/StatsCore/obj/Release/StatsCore.csproj.CoreCompileInputs.cache
+/home/justin/.local/share/com.kesomannen.gale/repo/profiles/Developer/BepInEx/plugins/StatsCore/StatsCore.deps.json
+/home/justin/.local/share/com.kesomannen.gale/repo/profiles/Developer/BepInEx/plugins/StatsCore/StatsCore.dll
+/home/justin/.local/share/com.kesomannen.gale/repo/profiles/Developer/BepInEx/plugins/StatsCore/StatsCore.pdb
+/home/justin/Code/REPO-Mods/StatsCore/StatsCore/obj/Release/StatsCore.dll
+/home/justin/Code/REPO-Mods/StatsCore/StatsCore/obj/Release/StatsCore.pdb
+/home/justin/.local/share/com.kesomannen.gale/repo/profiles/SurvivalEnhancedUpdatedPlus2026CosmeticDeluxeEdition/BepInEx/plugins/StatsCore/StatsCore.deps.json
+/home/justin/.local/share/com.kesomannen.gale/repo/profiles/SurvivalEnhancedUpdatedPlus2026CosmeticDeluxeEdition/BepInEx/plugins/StatsCore/StatsCore.dll
+/home/justin/.local/share/com.kesomannen.gale/repo/profiles/SurvivalEnhancedUpdatedPlus2026CosmeticDeluxeEdition/BepInEx/plugins/StatsCore/StatsCore.pdb

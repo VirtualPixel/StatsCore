@@ -1,0 +1,9 @@
+{
+  "name": "StatsCore",
+  "version_number": "0.1.0",
+  "website_url": "",
+  "description": "Per-player stat tracking for REPO mods: host-authoritative multiplayer sync, late-join, lifetime resets, and career persistence.",
+  "dependencies": [
+    "BepInEx-BepInExPack-5.4.2305"
+  ]
+}
