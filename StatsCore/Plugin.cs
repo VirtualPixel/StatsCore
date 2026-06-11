@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace StatsCore
 {
-    // Local stat-tracking library for REPO mods: track a value, timestamp it, persist it. No networking -
-    // each machine keeps its own player's record; a consuming mod handles any sharing it wants. Career stats
-    // persist to disk. Start with Stats.Define, or read the built-in pack via GameStats.
+    // Stat-tracking library for REPO mods: track a value, timestamp it, persist it, sync it. Level/Run/
+    // Session stats are host-authoritative and replicate to every client (late joiners get a snapshot);
+    // Career stats persist locally to disk. Start with Stats.Define, or read the built-in pack via GameStats.
     [BepInPlugin("Vippy.StatsCore", "StatsCore", BuildInfo.Version)]
     public class StatsCorePlugin : BaseUnityPlugin
     {
@@ -25,6 +25,7 @@ namespace StatsCore
             DontDestroyOnLoad(driver);
 
             GameStats.Register();   // the built-in REPO stat pack any mod can read
+            StatsNet.Install();      // sync layer for Level/Run/Session lifetimes
 
             Logger.LogInfo($"StatsCore v{BuildInfo.Version} loaded");
         }

@@ -7,21 +7,38 @@ namespace StatsCore
     //
     //   using StatsCore;
     //   var drinks = Stats.Define("vippy.pourdecisions.drinks", StatScope.PerPlayer, StatLifetime.Run);
-    //   drinks.Add(steamID, 1);          // local; persisted if Career
+    //   drinks.Add(steamID, 1);          // host-authoritative for synced lifetimes; local if Career
     //   int n = drinks.Get(steamID);
     //
     // Another mod can READ your stat by its key:  Stats.Get("vippy.pourdecisions.drinks")?.Get(id)
     //
-    // StatsCore is LOCAL ONLY - it never touches the network. Each machine tracks its own player's record
-    // (and whatever a consumer feeds it). If you need everyone's data, the consuming mod does that
-    // networking itself. Keys must be unique and stable; convention "author.modname.stat".
+    // Level/Run/Session stats sync: the host's writes replicate to every client running StatsCore,
+    // late joiners get a snapshot, and off-host writes are dropped (gate writes on Stats.IsHost).
+    // Career stats are LOCAL: each machine keeps its own player's record on disk, nothing networked.
+    // Keys must be unique and stable; convention "author.modname.stat".
     public static class Stats
     {
         private static readonly Dictionary<string, Stat> _stats = new();
 
+        // Reserved by the sync wire format and the career file. Validated at Define
+        // so a bad key fails the author loudly instead of corrupting frames later.
+        private static readonly char[] ReservedKeyChars = { '|', ',', ':', ';', '=', ' ', '\t', '\n', '\r' };
+
+        // True when this machine's writes to synced stats will land (host of a room,
+        // or not in multiplayer at all).
+        public static bool IsHost => StatsNet.CanWriteSynced;
+
         public static Stat Define(string key, StatScope scope, StatLifetime lifetime)
         {
-            if (_stats.TryGetValue(key, out var existing)) return existing;
+            if (string.IsNullOrEmpty(key) || key.IndexOfAny(ReservedKeyChars) >= 0)
+                throw new ArgumentException($"stat key '{key}' is empty or contains a reserved character (| , : ; = or whitespace)", nameof(key));
+            if (_stats.TryGetValue(key, out var existing))
+            {
+                // Same handle for everyone; logged so an accidental key collision
+                // between two mods leaves a trace.
+                StatsCorePlugin.Logger.LogDebug($"[StatsCore] Define('{key}') returned the existing stat (scope/lifetime of the first definition win)");
+                return existing;
+            }
             var stat = new Stat(key, scope, lifetime);
             _stats[key] = stat;
             if (lifetime == StatLifetime.Career) Persistence.Hydrate(stat);

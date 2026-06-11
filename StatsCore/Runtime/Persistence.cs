@@ -75,7 +75,12 @@ namespace StatsCore
                         sb.Append(stat.Key).Append('|').Append(kv.Key).Append('=').Append(kv.Value)
                           .Append(';').Append(stat.FirstUtc(kv.Key)).Append(';').Append(stat.LastUtc(kv.Key)).Append('\n');
                 }
-                File.WriteAllText(FilePath, sb.ToString());
+                // Write-then-swap so a crash mid-write can't leave a truncated
+                // career file behind. Replace is atomic on the same volume.
+                string tmp = FilePath + ".tmp";
+                File.WriteAllText(tmp, sb.ToString());
+                if (File.Exists(FilePath)) File.Replace(tmp, FilePath, null);
+                else File.Move(tmp, FilePath);
             }
             catch (Exception e)
             {

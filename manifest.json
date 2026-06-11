@@ -1,6 +1,6 @@
 {
   "name": "StatsCore",
-  "version_number": "0.1.0",
+  "version_number": "0.2.0",
   "website_url": "",
   "description": "Per-player stat tracking for REPO mods: host-authoritative multiplayer sync, late-join, lifetime resets, and career persistence.",
   "dependencies": [

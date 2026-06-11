@@ -89,12 +89,30 @@ namespace StatsCore
             return t == 0 ? (DateTime?)null : DateTimeOffset.FromUnixTimeSeconds(t).UtcDateTime;
         }
 
-        // ---- writes (local) ----
+        // ---- writes ----
+        // Career writes always land locally. Synced lifetimes (Level/Run/Session) are
+        // host-authoritative: on the host (or in singleplayer) the write lands and
+        // replicates to everyone; on a client it's dropped with a debug log so the
+        // consuming mod author sees why in LogOutput instead of chasing a ghost.
 
-        public void Add(string steamID, int delta) => ApplyLocal(Norm(steamID), Get(steamID) + delta);
-        public void Set(string steamID, int value) => ApplyLocal(Norm(steamID), value);
-        public void AddTeam(int delta) => ApplyLocal(TeamKey, GetTeam() + delta);
-        public void SetTeam(int value) => ApplyLocal(TeamKey, value);
+        public void Add(string steamID, int delta) => Write(Norm(steamID), Get(steamID) + delta);
+        public void Set(string steamID, int value) => Write(Norm(steamID), value);
+        public void AddTeam(int delta) => Write(TeamKey, GetTeam() + delta);
+        public void SetTeam(int value) => Write(TeamKey, value);
+
+        private void Write(string steamID, int value)
+        {
+            if (Lifetime != StatLifetime.Career && !StatsNet.CanWriteSynced)
+            {
+                StatsCorePlugin.Logger.LogDebug($"[StatsCore] write to synced '{Key}' ignored off-host (gate on Stats.IsHost)");
+                return;
+            }
+            ApplyLocal(steamID, value);
+            if (Lifetime != StatLifetime.Career) StatsNet.OnHostWrote(this, steamID, value);
+        }
+
+        // Network-applied values land without rebroadcast.
+        internal void ApplyFromNetwork(string steamID, int value) => ApplyLocal(Norm(steamID), value);
 
         // Fire `callback` once, the first time `steamID`'s value reaches `threshold` (>=). If it's already
         // there - e.g. a career stat just hydrated from disk - fires immediately. One-shot: unsubscribes
