@@ -16,6 +16,7 @@ namespace StatsCore
         {
             FlushTick();
             TickSamples();
+            GameStats.SampleLocalMovement(Time.deltaTime);   // distance walked/ran (gated on RunIsLevel inside)
 
             var rm = RunManager.instance;
             if (rm == null) return;

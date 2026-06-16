@@ -24,6 +24,15 @@ namespace StatsCore
         public string Category { get; private set; } = "";
         public StatFormat Format { get; private set; } = StatFormat.Count;
 
+        // When true, every change to this (Career) stat is also bucketed by calendar day so it can be queried
+        // per-day. Opt in with TrackDaily(); only meaningful for Career, which is the only persisted lifetime.
+        public bool TracksDaily { get; private set; }
+
+        // Ownership of a synced stat. Default is host-authoritative (only the host writes; gate on
+        // Stats.IsHost). Opt into ClientAuthoritative() to flip it: each client owns its OWN player's slot and
+        // pushes changes to everyone - the host then has every client's value without asking. See StatsNet.
+        public bool IsClientAuthoritative { get; private set; }
+
         // Fires after a value changes (locally or from the network): (steamID, newValue). Subscribe here to
         // trigger off a stat - e.g. reward when Get(id) crosses a threshold.
         public event Action<string, int>? Changed;
@@ -33,6 +42,11 @@ namespace StatsCore
         // every change so a permanent stat also answers "when" - first time, most recent time.
         private readonly Dictionary<string, long> _firstUtc = new();
         private readonly Dictionary<string, long> _lastUtc = new();
+        // Per-player, per-day deltas: steamID -> (dayEpoch -> amount changed that day). dayEpoch is whole UTC
+        // days since the Unix epoch. Only populated when TracksDaily; this is what query-by-day reads.
+        private readonly Dictionary<string, Dictionary<int, int>> _daily = new();
+
+        private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         internal Stat(string key, StatScope scope, StatLifetime lifetime)
         {
@@ -51,6 +65,41 @@ namespace StatsCore
             if (description != null) Description = description;
             if (category != null) Category = category;
             if (format != null) Format = format.Value;
+            return this;
+        }
+
+        // Opt this stat into per-day history so it answers GetToday / GetOnDay / GetRange / GetLastDays /
+        // DailyHistory. Chains off Define like Describe:
+        //   Stats.Define("mod.drinks", PerPlayer, Career).Describe("Drinks").TrackDaily();
+        // Career only - daily history rides the persisted record. Calling it triggers a daily hydrate so a
+        // stat that opts in after Define still gets yesterday's buckets back from disk.
+        public Stat TrackDaily()
+        {
+            if (Lifetime != StatLifetime.Career)
+            {
+                StatsCorePlugin.Logger.LogWarning($"[StatsCore] TrackDaily() on non-career '{Key}' ignored - daily history needs persistence (use StatLifetime.Career)");
+                return this;
+            }
+            if (!TracksDaily)
+            {
+                TracksDaily = true;
+                Persistence.HydrateDaily(this);
+            }
+            return this;
+        }
+
+        // Make this synced stat client-authoritative instead of host-authoritative: each client writes its
+        // OWN player's slot and the value replicates to everyone (the host included). Use it when the client
+        // is the one that knows the value - per-client counters a host wants to aggregate live. Chains off
+        // Define like Describe:
+        //   Stats.Define("vippy.pourdecisions.drinks", PerPlayer, Session).ClientAuthoritative();
+        // A client may only write its own slot; spoofing another player's slot is rejected on receipt.
+        public Stat ClientAuthoritative()
+        {
+            if (Lifetime == StatLifetime.Career)
+                StatsCorePlugin.Logger.LogWarning($"[StatsCore] ClientAuthoritative() on career '{Key}' ignored - career stats are already local; use Stats.RequestFromClients to pull them");
+            else
+                IsClientAuthoritative = true;
             return this;
         }
 
@@ -89,6 +138,58 @@ namespace StatsCore
             return t == 0 ? (DateTime?)null : DateTimeOffset.FromUnixTimeSeconds(t).UtcDateTime;
         }
 
+        // ---- query by day (only meaningful when TrackDaily() was called) ----
+        // Each bucket is how much the value CHANGED on that calendar day (UTC), so a range sum reconciles to
+        // the total. Days are addressed by their date; the time-of-day on a passed DateTime is ignored.
+
+        // Amount gained today (UTC).
+        public int GetToday(string steamID) => Bucket(Norm(steamID), DayEpochNow());
+
+        // Amount gained on one specific day.
+        public int GetOnDay(string steamID, DateTime dayUtc) => Bucket(Norm(steamID), DayEpoch(dayUtc));
+
+        // Amount gained across [fromUtc, toUtc] inclusive (order-independent).
+        public int GetRange(string steamID, DateTime fromUtc, DateTime toUtc)
+        {
+            if (!_daily.TryGetValue(Norm(steamID), out var byDay)) return 0;
+            int a = DayEpoch(fromUtc), b = DayEpoch(toUtc);
+            if (a > b) (a, b) = (b, a);
+            int sum = 0;
+            foreach (var kv in byDay) if (kv.Key >= a && kv.Key <= b) sum += kv.Value;
+            return sum;
+        }
+
+        // Amount gained over the last `days` days, today included (days=1 == today, 7 == this week so far).
+        public int GetLastDays(string steamID, int days)
+        {
+            if (days < 1 || !_daily.TryGetValue(Norm(steamID), out var byDay)) return 0;
+            int today = DayEpochNow(), from = today - (days - 1);
+            int sum = 0;
+            foreach (var kv in byDay) if (kv.Key >= from && kv.Key <= today) sum += kv.Value;
+            return sum;
+        }
+
+        // Full per-day history, oldest first: each entry is (that day's UTC date, amount gained that day).
+        public List<KeyValuePair<DateTime, int>> DailyHistory(string steamID)
+        {
+            var history = new List<KeyValuePair<DateTime, int>>();
+            if (_daily.TryGetValue(Norm(steamID), out var byDay))
+                foreach (var kv in byDay.OrderBy(k => k.Key))
+                    history.Add(new KeyValuePair<DateTime, int>(DateOfEpoch(kv.Key), kv.Value));
+            return history;
+        }
+
+        private int Bucket(string id, int dayEpoch) =>
+            _daily.TryGetValue(id, out var byDay) && byDay.TryGetValue(dayEpoch, out var v) ? v : 0;
+
+        private static int DayEpochNow() => (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 86400L);
+        private static int DayEpoch(DateTime day)
+        {
+            var utc = new DateTime(day.Year, day.Month, day.Day, 0, 0, 0, DateTimeKind.Utc);
+            return (int)(((DateTimeOffset)utc).ToUnixTimeSeconds() / 86400L);
+        }
+        private static DateTime DateOfEpoch(int dayEpoch) => UnixEpoch.AddDays(dayEpoch);
+
         // ---- writes ----
         // Career writes always land locally. Synced lifetimes (Level/Run/Session) are
         // host-authoritative: on the host (or in singleplayer) the write lands and
@@ -102,13 +203,30 @@ namespace StatsCore
 
         private void Write(string steamID, int value)
         {
-            if (Lifetime != StatLifetime.Career && !StatsNet.CanWriteSynced)
+            // Career is local: always writable, never networked.
+            if (Lifetime == StatLifetime.Career) { ApplyLocal(steamID, value); return; }
+
+            // Client-authoritative: you may only write your own slot; the change replicates to everyone.
+            if (IsClientAuthoritative)
+            {
+                if (!StatsNet.OwnsSlot(steamID))
+                {
+                    StatsCorePlugin.Logger.LogDebug($"[StatsCore] client-authoritative write to '{Key}' for a slot you don't own ignored (write your own steamID only)");
+                    return;
+                }
+                ApplyLocal(steamID, value);
+                StatsNet.OnOwnerWrote(this, steamID, value);
+                return;
+            }
+
+            // Host-authoritative (default): only the host's write lands and replicates.
+            if (!StatsNet.CanWriteSynced)
             {
                 StatsCorePlugin.Logger.LogDebug($"[StatsCore] write to synced '{Key}' ignored off-host (gate on Stats.IsHost)");
                 return;
             }
             ApplyLocal(steamID, value);
-            if (Lifetime != StatLifetime.Career) StatsNet.OnHostWrote(this, steamID, value);
+            StatsNet.OnHostWrote(this, steamID, value);
         }
 
         // Network-applied values land without rebroadcast.
@@ -133,10 +251,22 @@ namespace StatsCore
         // ---- internal: apply a value (from a write or a career hydrate) ----
         internal void ApplyLocal(string steamID, int value)
         {
+            int old = _values.TryGetValue(steamID, out var ov) ? ov : 0;
             _values[steamID] = value;
             long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             if (!_firstUtc.ContainsKey(steamID)) _firstUtc[steamID] = now;
             _lastUtc[steamID] = now;
+
+            // Bucket the change into today. Hydrates bypass this path (they set _values directly), so loading
+            // from disk never double-counts the per-day history.
+            if (TracksDaily && Lifetime == StatLifetime.Career && value != old)
+            {
+                int day = (int)(now / 86400L);
+                if (!_daily.TryGetValue(steamID, out var byDay)) { byDay = new Dictionary<int, int>(); _daily[steamID] = byDay; }
+                byDay.TryGetValue(day, out var cur);
+                byDay[day] = cur + (value - old);
+            }
+
             Changed?.Invoke(steamID, value);
             Stats.RaiseAnyChanged(this, steamID, value);
             if (Lifetime == StatLifetime.Career) Persistence.MarkDirty();
@@ -147,6 +277,7 @@ namespace StatsCore
             _values.Clear();
             _firstUtc.Clear();
             _lastUtc.Clear();
+            _daily.Clear();
         }
 
         internal void HydrateCareer(Dictionary<string, CareerEntry> saved)
@@ -160,6 +291,10 @@ namespace StatsCore
         }
 
         internal IEnumerable<KeyValuePair<string, int>> Raw => _values;
+
+        // ---- daily persistence hooks (used by Persistence) ----
+        internal IEnumerable<KeyValuePair<string, Dictionary<int, int>>> RawDaily => _daily;
+        internal void HydrateDailyEntry(string steamID, Dictionary<int, int> byDay) => _daily[steamID] = byDay;
 
         private static string Norm(string steamID) => string.IsNullOrEmpty(steamID) ? TeamKey : steamID;
     }

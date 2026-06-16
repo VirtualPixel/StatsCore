@@ -49,6 +49,17 @@ namespace StatsCore
 
         public static IEnumerable<Stat> All => _stats.Values;
 
+        // Host-pull: ask every client in the room for its local value of `key` and collect the answers. Each
+        // client reports its OWN player's slot, so this works even for Career / local-only stats that never
+        // sync continuously - e.g. gather everyone's career deaths for an end-of-run scoreboard. The callback
+        // fires once on the host with a steamID -> value map (the host's own value included) when all clients
+        // have replied or `timeoutSeconds` elapses, whichever comes first.
+        //
+        // Only meaningful on the host. Off-host or offline it answers immediately with just the local value.
+        //   Stats.RequestFromClients(GameStats.K_Deaths, byPlayer => ShowScoreboard(byPlayer));
+        public static void RequestFromClients(string key, Action<IReadOnlyDictionary<string, int>> onComplete, float timeoutSeconds = 3f)
+            => StatsNet.RequestFromClients(key, onComplete, timeoutSeconds);
+
         // Fires whenever ANY defined stat changes: (stat, steamID, newValue). A firehose, handy for a stats
         // overlay or debug readout. For a targeted reaction, prefer a specific Stat.Changed or Stat.OnReach.
         public static event Action<Stat, string, int>? AnyChanged;

@@ -1,8 +1,8 @@
 {
   "name": "StatsCore",
-  "version_number": "0.2.0",
-  "website_url": "",
-  "description": "Per-player stat tracking for REPO mods: host-authoritative multiplayer sync, late-join, lifetime resets, and career persistence.",
+  "version_number": "0.1.0",
+  "website_url": "https://github.com/VirtualPixel/StatsCore",
+  "description": "Stat-tracking library for REPO mods: define a stat, two-way multiplayer sync, career persistence, query-by-day, and a built-in pack of player stats.",
   "dependencies": [
     "BepInEx-BepInExPack-5.4.2305"
   ]

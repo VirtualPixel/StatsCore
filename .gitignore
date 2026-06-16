@@ -1,0 +1,7 @@
+# Build intermediates
+obj/
+bin/
+
+# OS / editor cruft
+.DS_Store
+*.user
