@@ -296,6 +296,11 @@ namespace StatsCore
         internal IEnumerable<KeyValuePair<string, Dictionary<int, int>>> RawDaily => _daily;
         internal void HydrateDailyEntry(string steamID, Dictionary<int, int> byDay) => _daily[steamID] = byDay;
 
-        private static string Norm(string steamID) => string.IsNullOrEmpty(steamID) ? TeamKey : steamID;
+        // A slot key is usually a steamID, but the built-in pack (and any consumer) also keys by display
+        // names the game or a content mod supplies - "Slow Mouth", whatever an enemy pack calls itself. Those
+        // strings frame both the career file and the snapshot wire format, so fold the framing characters out
+        // here, once, on the way in. Sanitizing is idempotent, so a read and a write always agree.
+        private static string Norm(string steamID) =>
+            string.IsNullOrEmpty(steamID) ? TeamKey : CareerFile.SanitizeSlot(steamID);
     }
 }
