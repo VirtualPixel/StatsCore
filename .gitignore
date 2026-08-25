@@ -5,3 +5,11 @@ bin/
 # OS / editor cruft
 .DS_Store
 *.user
+
+# Packaging output. BuildZip/icon.png is a source asset and stays tracked; the
+# staged folder and the Thunderstore zip are rebuilt by the PackageMod target on
+# every compile, so tracking them means git status is dirty after any build.
+BuildZip/StatsCore/
+BuildZip/StatsCore.zip
+
+graphify-out/
