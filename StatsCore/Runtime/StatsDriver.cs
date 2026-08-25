@@ -15,11 +15,15 @@ namespace StatsCore
         private void Update()
         {
             FlushTick();
-            TickSamples();
-            GameStats.SampleLocalMovement(Time.deltaTime);   // distance walked/ran (gated on RunIsLevel inside)
 
+            // Every SemiFunc.RunIs* helper dereferences RunManager.instance without a null check, and this
+            // driver is alive from the BepInEx chainloader onwards - several frames before RunManager exists.
+            // Nothing below this line may run until it does.
             var rm = RunManager.instance;
             if (rm == null) return;
+
+            TickSamples();
+            GameStats.SampleLocalMovement(Time.deltaTime);   // distance walked/ran (gated on RunIsLevel inside)
 
             // Level changed (any scene transition): clear Level-scoped stats, then mirror level-scoped values.
             object cur = rm.levelCurrent;
