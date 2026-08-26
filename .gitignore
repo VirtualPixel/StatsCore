@@ -13,3 +13,7 @@ BuildZip/StatsCore/
 BuildZip/StatsCore.zip
 
 graphify-out/
+
+# Test project build output
+StatsCore.Tests/bin/
+StatsCore.Tests/obj/

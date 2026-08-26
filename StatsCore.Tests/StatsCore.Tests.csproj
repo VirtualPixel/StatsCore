@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Covers the parts of StatsCore that are pure C#: the career file format and the calendar-day
+       arithmetic behind query-by-day. Those files are linked in rather than referenced, so the tests
+       need no game DLLs, no BepInEx and no Unity runtime - `dotnet test` works on any machine. -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>StatsCore.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="../StatsCore/Api/StatTypes.cs" Link="Linked/StatTypes.cs" />
+    <Compile Include="../StatsCore/Runtime/CareerFile.cs" Link="Linked/CareerFile.cs" />
+    <Compile Include="../StatsCore/Runtime/DayMath.cs" Link="Linked/DayMath.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+</Project>
