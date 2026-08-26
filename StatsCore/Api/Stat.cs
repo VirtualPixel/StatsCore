@@ -222,8 +222,18 @@ namespace StatsCore
             StatsNet.OnHostWrote(this, steamID, value);
         }
 
-        // Network-applied values land without rebroadcast.
-        internal void ApplyFromNetwork(string steamID, int value) => ApplyLocal(Norm(steamID), value);
+        // Network-applied values land without rebroadcast. Career never rides the wire in either direction,
+        // so a frame naming a career key is a peer running something other than this library: drop it rather
+        // than let a remote machine write this player's permanent record.
+        internal void ApplyFromNetwork(string steamID, int value)
+        {
+            if (Lifetime == StatLifetime.Career)
+            {
+                StatsCorePlugin.Logger.LogWarning($"[StatsCore] refused a networked write to career stat '{Key}'");
+                return;
+            }
+            ApplyLocal(Norm(steamID), value);
+        }
 
         // Fire `callback` once, the first time `steamID`'s value reaches `threshold` (>=). If it's already
         // there - e.g. a career stat just hydrated from disk - fires immediately. One-shot: unsubscribes
