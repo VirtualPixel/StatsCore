@@ -52,8 +52,8 @@
       <HintPath>$(RepoManagedDir)/Assembly-CSharp-firstpass.dll</HintPath>
       <Private>false</Private>
     </Reference>
-    <!-- StatsCore does no networking, but vanilla types we read (EnemyParent, Arena, PlayerAvatar...) derive
-         from Photon base classes, so the compiler needs these assemblies on the reference path. -->
+    <!-- StatsNet rides PunManager's PhotonView, and the vanilla types we read (EnemyParent, Arena,
+         PlayerAvatar...) derive from Photon base classes either way. -->
     <Reference Include="PhotonUnityNetworking">
       <HintPath>$(RepoManagedDir)/PhotonUnityNetworking.dll</HintPath>
       <Private>false</Private>
