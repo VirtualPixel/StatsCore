@@ -229,13 +229,13 @@ namespace StatsCore
         // there - e.g. a career stat just hydrated from disk - fires immediately. One-shot: unsubscribes
         // itself, so a milestone reward is a single line and never re-triggers.
         //
-        // Returns a cancel action. A threshold that never gets reached leaves the handler subscribed for the
-        // rest of the session, so anything registering per player per run should hold the cancel and call it
-        // when the run ends. Ignoring the return value is fine for a one-off registered at startup.
-        public Action OnReach(string steamID, int threshold, Action callback)
+        // A threshold that is never reached keeps its handler on Changed for the rest of the session, so this
+        // is for milestones registered once, not for something re-registered per player per run. Handing back
+        // a cancel would change the signature, and 0.1.0 is already out; that belongs in the next minor.
+        public void OnReach(string steamID, int threshold, Action callback)
         {
             string id = Norm(steamID);
-            if (Get(id) >= threshold) { callback(); return () => { }; }
+            if (Get(id) >= threshold) { callback(); return; }
             void Handler(string changedId, int newValue)
             {
                 if (changedId != id || newValue < threshold) return;
@@ -243,7 +243,6 @@ namespace StatsCore
                 callback();
             }
             Changed += Handler;
-            return () => Changed -= Handler;
         }
 
         // ---- internal: apply a value (from a write or a career hydrate) ----
