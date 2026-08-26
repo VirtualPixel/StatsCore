@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- Career rows belonging to a stat nobody defined this session are kept instead of dropped. Running once without a mod that owns some career stats used to erase its history on the next save; the same went for daily buckets when a stat never called `TrackDaily()`.
+- Daily buckets are the machine's local calendar day, not UTC. `GetToday` read UTC while `GetOnDay` read the raw date components off whatever you handed it, so the two disagreed between local midnight and UTC midnight. Buckets written by 0.1.0 can sit one day off; everything from here is consistent.
+- Slot keys are sanitized. Deaths-by-enemy, damage-by-enemy and map visits key on a display name a content mod can set to anything, and `| = ; ,` in one of those split a save line or a snapshot frame in the wrong place. Those characters fold to `_` now.
+- Fixed a NullReferenceException every frame between the chainloader and the first level: the driver called `SemiFunc.RunIsLevel()`, which dereferences `RunManager.instance` unguarded, before it existed.
+- StatsNet attaches to `PunManager` even when its `Awake` already ran before the chainloader reached us. It used to leave sync silently dead for the whole session.
+- Host migration: the new master pushes a snapshot so the room agrees on the values it is now authoritative for, and pulls the old host had open are dropped rather than firing a half-filled callback.
+- A client can no longer answer the same `RequestFromClients` pull more than once and complete it before the rest of the room replies; a client that leaves mid-pull stops being waited on.
+- Career files carry a version header and the atomic swap keeps the version it replaced as `.bak`, which is read back if the live file has gone unreadable. Files written by 0.1.0 still load.
+- Mirrors on synced stats are no longer sampled on clients, where the write was dropped and logged every 3 seconds for the whole session.
+
 ## 0.1.0
 
 First release.

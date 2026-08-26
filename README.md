@@ -97,9 +97,11 @@ Career stats are **local** to each machine. Every player keeps their own record 
 
 ## Persistence and querying by day
 
-Career stats are written to `BepInEx/config/StatsCore/career.txt` (debounced, atomic write-then-swap, with first/last timestamps). You get the totals back automatically the moment you `Define` a Career stat.
+Career stats are written to `BepInEx/config/StatsCore/career.txt` (debounced, atomic write-then-swap, with first/last timestamps). You get the totals back automatically the moment you `Define` a Career stat. The swap keeps the version it replaced as `career.txt.bak`, and a file that has gone unreadable is loaded from that instead.
 
-Opt a Career stat into per-day history with `.TrackDaily()`. Each change is bucketed by UTC calendar day, persisted to `career-daily.txt`, and queryable:
+Rows belonging to a stat nobody defined this session are copied through on every save, so uninstalling a mod for an evening doesn't erase the career numbers it owns.
+
+Opt a Career stat into per-day history with `.TrackDaily()`. Each change is bucketed by the machine's local calendar day, persisted to `career-daily.txt`, and queryable:
 
 ```csharp
 stat.GetToday(steamID);                      // gained today
@@ -109,7 +111,9 @@ stat.GetLastDays(steamID, 7);                // gained over the last 7 days, tod
 stat.DailyHistory(steamID);                  // every day on record, oldest first
 ```
 
-Buckets store the *change* on each day, so a range sum always reconciles to the running total. Daily history is opt-in because it grows the save file; leave it off for stats you'll only ever read as a lifetime total.
+Buckets store the *change* on each day, so a range sum always reconciles to the running total. Days are local, not UTC: a career stat belongs to one player on one PC, so "today" means their today rather than rolling over mid-evening. Only the date part of a `DateTime` is read, and a UTC one is converted first, so `DateTime.Today` and `DateTime.UtcNow` both land on the right bucket.
+
+Daily history is opt-in because it grows the save file; leave it off for stats you'll only ever read as a lifetime total.
 
 ## Timestamps and milestones
 
@@ -125,6 +129,8 @@ Fire a one-shot callback the first time a value crosses a threshold (fires immed
 ```csharp
 stat.OnReach(steamID, 100, () => GiveReward(steamID));
 ```
+
+A threshold that never gets reached keeps its handler subscribed for the rest of the session, so register milestones once at startup rather than per player per run.
 
 React to any change with `stat.Changed` (one stat) or `Stats.AnyChanged` (every stat, a firehose handy for an overlay).
 
@@ -142,7 +148,7 @@ Trackers.Mirror(haul, () => StatsManager.instance.GetRunStatTotalHaul(), SampleW
 Trackers.MirrorPlayers(health, p => p.playerHealth.health);
 ```
 
-`SampleWhen` is `LevelChange`, `RunReset`, or `Tick` (a slow ~3s poll that only runs if some mirror asks for it).
+`SampleWhen` is `LevelChange`, `RunReset`, or `Tick` (a slow ~3s poll that only runs if some mirror asks for it). A mirror on a synced stat is a host-side thing: clients skip sampling it, since their write would be dropped anyway.
 
 ## Built-in GameStats pack
 
@@ -169,3 +175,15 @@ int ranToday = GameStats.DistanceSprinting.GetToday(steamID);
 ## A note on enemy names
 
 Anything keyed by enemy name resolves through the game's own `enemyName`, so it always matches whatever the current build calls a given enemy, including ones added after this library shipped. Community nicknames (like "Loom") only match if that's the in-game name; otherwise read the name the game uses.
+
+Names are slot keys, and slot keys frame both the save file and the sync wire format, so `| = ; , :` and whitespace controls are folded to `_` on the way in. An enemy a content mod calls `Slow=Mouth` reads back as `Slow_Mouth`. Ordinary names are untouched.
+
+## Contact
+
+| Purpose | Where |
+|---|---|
+| Bug reports and suggestions | [GitHub Issues](https://github.com/VirtualPixel/StatsCore/issues) |
+| Questions, test builds, or just hanging out | [Vippy's Discord](https://discord.gg/kKqhck2NrP) |
+| R.E.P.O. modding in general | [R.E.P.O. Modding Server](https://discord.gg/9fDzZ9sk95) |
+
+Everything I make stays free. If one of these mods made your runs better and you feel like saying thanks, there is a [Ko-fi](https://ko-fi.com/vippydev).

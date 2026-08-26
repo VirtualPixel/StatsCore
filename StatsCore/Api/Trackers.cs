@@ -17,11 +17,11 @@ namespace StatsCore
     // just disables that tracker (logged) instead of crashing. Two flavours, both "ride off vanilla":
     //
     //   HOOK   - event-driven, zero overhead, fires when the vanilla method runs:
-    //     Trackers.Hook(doors, typeof(PhysGrabObject), "OnGrabbed", (s, inst, args) => s.Add(idFrom(inst), 1));
+    //     Trackers.Hook(grabs, typeof(PhysGrabObject), "GrabStarted", (s, inst, args) => s.Add(idFrom(args), 1));
     //
     //   MIRROR - read a value the game ALREADY keeps, sampled at lifecycle points (no per-frame cost):
-    //     Trackers.Mirror(rooms, () => LevelGenerator.Instance.RoomCount);                 // team/global
-    //     Trackers.MirrorPlayers(distance, p => (int)p.someVanillaDistanceField);          // per player
+    //     Trackers.Mirror(level, () => StatsManager.instance.GetRunStatLevel());       // team/global
+    //     Trackers.MirrorPlayers(hp, p => p.playerHealth.health);                      // per player
     //
     // Each call is a self-contained, deletable object. Host-only effects (it writes synced stats).
     public static class Trackers
