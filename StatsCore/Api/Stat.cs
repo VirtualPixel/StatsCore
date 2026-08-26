@@ -42,11 +42,10 @@ namespace StatsCore
         // every change so a permanent stat also answers "when" - first time, most recent time.
         private readonly Dictionary<string, long> _firstUtc = new();
         private readonly Dictionary<string, long> _lastUtc = new();
-        // Per-player, per-day deltas: steamID -> (dayEpoch -> amount changed that day). dayEpoch is whole UTC
-        // days since the Unix epoch. Only populated when TracksDaily; this is what query-by-day reads.
+        // Per-player, per-day deltas: steamID -> (dayIndex -> amount changed that day). dayIndex is whole
+        // LOCAL calendar days since 1970-01-01 (see DayMath). Only populated when TracksDaily; this is what
+        // query-by-day reads.
         private readonly Dictionary<string, Dictionary<int, int>> _daily = new();
-
-        private static readonly DateTime UnixEpoch = new(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         internal Stat(string key, StatScope scope, StatLifetime lifetime)
         {
@@ -139,20 +138,22 @@ namespace StatsCore
         }
 
         // ---- query by day (only meaningful when TrackDaily() was called) ----
-        // Each bucket is how much the value CHANGED on that calendar day (UTC), so a range sum reconciles to
-        // the total. Days are addressed by their date; the time-of-day on a passed DateTime is ignored.
+        // Each bucket is how much the value CHANGED on that calendar day, so a range sum reconciles to the
+        // total. Days are the machine's LOCAL calendar days: a career stat belongs to one player on one PC,
+        // so "today" has to be their today, not Greenwich's. Only the date part of a passed DateTime is read;
+        // a UTC one is converted to local first, so DateTime.Today and DateTime.UtcNow both land right.
 
-        // Amount gained today (UTC).
-        public int GetToday(string steamID) => Bucket(Norm(steamID), DayEpochNow());
+        // Amount gained today.
+        public int GetToday(string steamID) => Bucket(Norm(steamID), DayMath.Today());
 
         // Amount gained on one specific day.
-        public int GetOnDay(string steamID, DateTime dayUtc) => Bucket(Norm(steamID), DayEpoch(dayUtc));
+        public int GetOnDay(string steamID, DateTime day) => Bucket(Norm(steamID), DayMath.IndexOf(day));
 
-        // Amount gained across [fromUtc, toUtc] inclusive (order-independent).
-        public int GetRange(string steamID, DateTime fromUtc, DateTime toUtc)
+        // Amount gained across [from, to] inclusive (order-independent).
+        public int GetRange(string steamID, DateTime from, DateTime to)
         {
             if (!_daily.TryGetValue(Norm(steamID), out var byDay)) return 0;
-            int a = DayEpoch(fromUtc), b = DayEpoch(toUtc);
+            int a = DayMath.IndexOf(from), b = DayMath.IndexOf(to);
             if (a > b) (a, b) = (b, a);
             int sum = 0;
             foreach (var kv in byDay) if (kv.Key >= a && kv.Key <= b) sum += kv.Value;
@@ -163,32 +164,24 @@ namespace StatsCore
         public int GetLastDays(string steamID, int days)
         {
             if (days < 1 || !_daily.TryGetValue(Norm(steamID), out var byDay)) return 0;
-            int today = DayEpochNow(), from = today - (days - 1);
+            int today = DayMath.Today(), from = today - (days - 1);
             int sum = 0;
             foreach (var kv in byDay) if (kv.Key >= from && kv.Key <= today) sum += kv.Value;
             return sum;
         }
 
-        // Full per-day history, oldest first: each entry is (that day's UTC date, amount gained that day).
+        // Full per-day history, oldest first: each entry is (that local date, amount gained that day).
         public List<KeyValuePair<DateTime, int>> DailyHistory(string steamID)
         {
             var history = new List<KeyValuePair<DateTime, int>>();
             if (_daily.TryGetValue(Norm(steamID), out var byDay))
                 foreach (var kv in byDay.OrderBy(k => k.Key))
-                    history.Add(new KeyValuePair<DateTime, int>(DateOfEpoch(kv.Key), kv.Value));
+                    history.Add(new KeyValuePair<DateTime, int>(DayMath.DateOf(kv.Key), kv.Value));
             return history;
         }
 
-        private int Bucket(string id, int dayEpoch) =>
-            _daily.TryGetValue(id, out var byDay) && byDay.TryGetValue(dayEpoch, out var v) ? v : 0;
-
-        private static int DayEpochNow() => (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 86400L);
-        private static int DayEpoch(DateTime day)
-        {
-            var utc = new DateTime(day.Year, day.Month, day.Day, 0, 0, 0, DateTimeKind.Utc);
-            return (int)(((DateTimeOffset)utc).ToUnixTimeSeconds() / 86400L);
-        }
-        private static DateTime DateOfEpoch(int dayEpoch) => UnixEpoch.AddDays(dayEpoch);
+        private int Bucket(string id, int dayIndex) =>
+            _daily.TryGetValue(id, out var byDay) && byDay.TryGetValue(dayIndex, out var v) ? v : 0;
 
         // ---- writes ----
         // Career writes always land locally. Synced lifetimes (Level/Run/Session) are
@@ -261,7 +254,7 @@ namespace StatsCore
             // from disk never double-counts the per-day history.
             if (TracksDaily && Lifetime == StatLifetime.Career && value != old)
             {
-                int day = (int)(now / 86400L);
+                int day = DayMath.Today();
                 if (!_daily.TryGetValue(steamID, out var byDay)) { byDay = new Dictionary<int, int>(); _daily[steamID] = byDay; }
                 byDay.TryGetValue(day, out var cur);
                 byDay[day] = cur + (value - old);
