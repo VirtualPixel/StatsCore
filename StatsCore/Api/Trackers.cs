@@ -104,13 +104,17 @@ namespace StatsCore
         public static void MirrorPlayers(Stat stat, Func<PlayerAvatar, int> read, SampleWhen when = SampleWhen.LevelChange)
             => _mirrors.Add(new MirrorEntry { Stat = stat, PerPlayer = read, When = when });
 
-        // Called by StatsDriver at the matching moment. Local, like everything in StatsCore.
+        // Called by StatsDriver at the matching moment.
         internal static void Sample(SampleWhen when)
         {
+            // A mirror writes the stat, so on a client a synced mirror would be dropped by Stat.Write and log
+            // a line for it - every 3s, forever, on every client with a Tick mirror. Don't sample those at all.
+            bool canWriteSynced = Stats.IsHost;
             for (int i = 0; i < _mirrors.Count; i++)
             {
                 var m = _mirrors[i];
                 if (m.When != when) continue;
+                if (!canWriteSynced && m.Stat.Lifetime != StatLifetime.Career && !m.Stat.IsClientAuthoritative) continue;
                 try
                 {
                     if (m.Global != null) m.Stat.SetTeam(m.Global());
