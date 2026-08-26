@@ -49,12 +49,18 @@ namespace StatsCore
                 return;
             }
             _harmony.Patch(awake, postfix: new HarmonyMethod(typeof(StatsNet), nameof(AttachPostfix)));
+
+            // PunManager lives in the boot scene. If its Awake already ran by the time the chainloader got
+            // to us, the patch above will never fire and sync would be silently dead for the whole session.
+            if (PunManager.instance != null) Attach(PunManager.instance);
         }
 
-        private static void AttachPostfix(PunManager __instance)
+        private static void AttachPostfix(PunManager __instance) => Attach(__instance);
+
+        private static void Attach(PunManager manager)
         {
-            if (__instance.GetComponent<StatsNet>() == null)
-                __instance.gameObject.AddComponent<StatsNet>();
+            if (manager.GetComponent<StatsNet>() == null)
+                manager.gameObject.AddComponent<StatsNet>();
         }
 
         private void Awake() => _instance = this;
@@ -118,6 +124,9 @@ namespace StatsCore
         private sealed class PullRequest
         {
             public Dictionary<string, int> Results = new();
+            // Actor numbers that have already answered. Counting replies instead would let one client answer
+            // five times and complete the pull before anyone else got a word in.
+            public HashSet<int> Answered = new();
             public int Pending;
             public bool Completed;
             public Action<IReadOnlyDictionary<string, int>> Done = null!;
@@ -172,6 +181,7 @@ namespace StatsCore
             if (!PhotonNetwork.IsMasterClient) return;
             if (!SenderOwns(info, steamID)) return;   // a client may only answer for its own slot
             if (!_pulls.TryGetValue(requestId, out var req) || req.Completed) return;
+            if (!req.Answered.Add(info.Sender.ActorNumber)) return;   // one answer each
             req.Results[steamID] = value;
             req.Pending--;
             if (req.Pending <= 0) CompletePull(requestId);
@@ -203,13 +213,50 @@ namespace StatsCore
             return result;
         }
 
+        // A client that leaves mid-pull is never going to answer. Without this the pull sits until its
+        // timeout even though everyone still in the room has replied.
+        public override void OnPlayerLeftRoom(Player otherPlayer)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            var ids = new List<int>(_pulls.Keys);
+            foreach (int id in ids)
+            {
+                if (!_pulls.TryGetValue(id, out var req) || req.Completed) continue;
+                if (req.Answered.Contains(otherPlayer.ActorNumber)) continue;
+                req.Pending--;
+                if (req.Pending <= 0) CompletePull(id);
+            }
+        }
+
         // ---- late-join snapshot -------------------------------------------------
 
         public override void OnPlayerEnteredRoom(Player newPlayer)
         {
             if (!PhotonNetwork.IsMasterClient) return;
+            SendSnapshot(newPlayer);
+        }
+
+        // The old host's writes stop the moment it drops, and whoever PUN promotes carries whatever it last
+        // received. Push that state to the rest of the room so everyone agrees on the values the new host is
+        // now authoritative for, instead of each client keeping its own last-heard copy.
+        public override void OnMasterClientSwitched(Player newMasterClient)
+        {
+            if (!PhotonNetwork.IsMasterClient) return;
+            SendSnapshot(null);
+
+            // Pulls the old host started belong to a session that is over; their callbacks would fire with a
+            // half-filled map. Drop them rather than report a partial answer as a complete one.
+            _pulls.Clear();
+        }
+
+        // target null == everyone else in the room.
+        private void SendSnapshot(Player? target)
+        {
             foreach (string chunk in BuildSnapshotChunks())
-                photonView.RPC(nameof(StatsCoreSnapshotRPC), newPlayer, chunk);
+            {
+                if (target != null) photonView.RPC(nameof(StatsCoreSnapshotRPC), target, chunk);
+                else photonView.RPC(nameof(StatsCoreSnapshotRPC), RpcTarget.Others, chunk);
+            }
         }
 
         [PunRPC]
