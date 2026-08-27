@@ -8,7 +8,7 @@ namespace StatsCore
     //
     //   int crowns = GameStats.CrownWins.Get(steamID);             // typed handle
     //   int deaths = Stats.Get(GameStats.K_Deaths)?.Get(id) ?? 0;  // or by stable key, no reference needed
-    //   int today  = GameStats.DistanceTraveled.GetToday(id);      // metres walked/ran today (query by day)
+    //   int today  = GameStats.DistanceTraveled.GetToday(id);      // meters walked/ran today (query by day)
     //
     // Most of these are CAREER stats: persisted, and LOCAL to each machine - every player's file holds their
     // own record (the hooks fire on all clients, but each only writes for its own local avatar). That keeps a
@@ -28,9 +28,9 @@ namespace StatsCore
         public const string K_DamageTakenByEnemy = "statscore.damageTakenByEnemy"; // keyed by ENEMY NAME, not steamID
         public const string K_HitsTaken = "statscore.hitsTaken";
         public const string K_HealthHealed = "statscore.healthHealed";
-        public const string K_DistanceTraveled = "statscore.distanceTraveled"; // metres
-        public const string K_DistanceWalking = "statscore.distanceWalking";   // metres at walking pace
-        public const string K_DistanceSprinting = "statscore.distanceSprinting"; // metres at a sprint
+        public const string K_DistanceTraveled = "statscore.distanceTraveled"; // meters
+        public const string K_DistanceWalking = "statscore.distanceWalking";   // meters at walking pace
+        public const string K_DistanceSprinting = "statscore.distanceSprinting"; // meters at a sprint
         public const string K_ObjectsGrabbed = "statscore.objectsGrabbed";
         public const string K_EnemiesKilled = "statscore.enemiesKilled";
         public const string K_FriendlyFireDealt = "statscore.friendlyFireDealt";
@@ -97,7 +97,7 @@ namespace StatsCore
             CrownWins = Career(K_CrownWins, "Crown Wins", "King-of-the-losers victories.", "Glory");
             EnemiesKilled = Career(K_EnemiesKilled, "Enemies Killed", "Enemies that died to your handiwork (best effort - the game rarely names a killer).", "Glory").TrackDaily();
             MapVisits = Career(K_MapVisits, "Map Visits", "How many times you've dropped into each level (keyed by level name).", "Expeditions");
-            DistanceTraveled = Career(K_DistanceTraveled, "Distance Traveled", "Total ground you've covered, in metres.", "Mobility", StatFormat.Distance).TrackDaily();
+            DistanceTraveled = Career(K_DistanceTraveled, "Distance Traveled", "Total ground you've covered, in meters.", "Mobility", StatFormat.Distance).TrackDaily();
             DistanceWalking = Career(K_DistanceWalking, "Distance Walking", "Metres covered at a walk.", "Mobility", StatFormat.Distance).TrackDaily();
             DistanceSprinting = Career(K_DistanceSprinting, "Distance Sprinting", "Metres covered at a sprint.", "Mobility", StatFormat.Distance).TrackDaily();
             ObjectsGrabbed = Career(K_ObjectsGrabbed, "Objects Grabbed", "Things you've latched onto with the grab beam.", "Mobility").TrackDaily();
@@ -250,7 +250,7 @@ namespace StatsCore
         // ---- local movement sampling (distance walked/ran) ----
         // Distance can't ride a vanilla event - it's continuous - so the driver feeds us a per-frame slice.
         // We read the LOCAL player's controller velocity (not a raw position delta, so teleports/respawns
-        // don't spike), accumulate fractional metres, and commit whole metres to keep change events sane.
+        // don't spike), accumulate fractional meters, and commit whole meters to keep change events sane.
 
         private static float _distAccum, _walkAccum, _runAccum;
 
@@ -265,11 +265,11 @@ namespace StatsCore
 
             Vector3 v = pc.Velocity;
             v.y = 0f;
-            float metres = v.magnitude * dt;
-            if (metres <= 0.01f || metres >= 5f) return;   // idle, or an implausible single-frame jump
+            float meters = v.magnitude * dt;
+            if (meters <= 0.01f || meters >= 5f) return;   // idle, or an implausible single-frame jump
 
-            _distAccum += metres;
-            if (pc.sprinting) _runAccum += metres; else _walkAccum += metres;
+            _distAccum += meters;
+            if (pc.sprinting) _runAccum += meters; else _walkAccum += meters;
 
             CommitMetres(DistanceTraveled, id, ref _distAccum);
             CommitMetres(DistanceSprinting, id, ref _runAccum);

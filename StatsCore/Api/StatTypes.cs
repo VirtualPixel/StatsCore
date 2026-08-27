@@ -32,7 +32,7 @@ namespace StatsCore
     {
         Count,     // a tally (doors touched, kills, drinks)
         Time,      // seconds
-        Distance,  // metres
+        Distance,  // meters
         Money,     // currency
         Percent,   // 0..100
         Raw,       // show the number as-is

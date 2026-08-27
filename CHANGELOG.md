@@ -9,6 +9,7 @@
 - StatsNet attaches to `PunManager` even when its `Awake` already ran before the chainloader reached us. It used to leave sync silently dead for the whole session.
 - Host migration: the new master pushes a snapshot so the room agrees on the values it is now authoritative for, and pulls the old host had open are dropped rather than firing a half-filled callback.
 - A client can no longer answer the same `RequestFromClients` pull more than once and complete it before the rest of the room replies; a client that leaves mid-pull stops being waited on.
+- A networked write naming a career stat is refused. Career never rides the wire, so nothing legitimate sends one, and without the check a peer running a patched build could write straight into another player's permanent record.
 - Career files carry a version header and the atomic swap keeps the version it replaced as `.bak`, which is read back if the live file has gone unreadable. Files written by 0.1.0 still load.
 - Mirrors on synced stats are no longer sampled on clients, where the write was dropped and logged every 3 seconds for the whole session.
 

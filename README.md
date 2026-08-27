@@ -159,12 +159,12 @@ Defined at boot, filled from vanilla events, free to read by any mod. Each is pe
 | Misfortune | Deaths (+ per-enemy breakdown), Knockdowns, Spewer Faces, Damage Taken (+ per-enemy breakdown), Hits Taken |
 | Recovery | Revives, Health Healed |
 | Glory | Crown Wins, Enemies Killed |
-| Mobility | Distance Traveled / Walking / Sprinting (metres), Objects Grabbed |
+| Mobility | Distance Traveled / Walking / Sprinting (meters), Objects Grabbed |
 | Mischief | Friendly Fire, Teammates Killed, Betrayal Taken |
 | Expeditions | Map Visits (keyed by level name) |
 | Expedition (live, synced team mirrors) | Run Level, Run Currency, Total Haul |
 
-The per-enemy breakdowns are keyed by enemy display name rather than steamID, so `GameStats.DamageTakenByEnemy.Get("Loom")` tells you exactly how hard a given enemy has clapped you over your career. Distance is stored in metres; a display can convert to whatever unit it likes (the `StatFormat.Distance` hint marks it).
+The per-enemy breakdowns are keyed by enemy display name rather than steamID, so `GameStats.DamageTakenByEnemy.Get("Loom")` tells you exactly how hard a given enemy has clapped you over your career. Distance is stored in meters; a display can convert to whatever unit it likes (the `StatFormat.Distance` hint marks it).
 
 ```csharp
 int crowns = GameStats.CrownWins.Get(steamID);

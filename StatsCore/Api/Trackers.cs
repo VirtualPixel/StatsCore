@@ -23,7 +23,8 @@ namespace StatsCore
     //     Trackers.Mirror(level, () => StatsManager.instance.GetRunStatLevel());       // team/global
     //     Trackers.MirrorPlayers(hp, p => p.playerHealth.health);                      // per player
     //
-    // Each call is a self-contained, deletable object. Host-only effects (it writes synced stats).
+    // Each call is a self-contained, deletable object. A mirror on a synced stat only samples on the host,
+    // since a client's write would be dropped anyway.
     public static class Trackers
     {
         // ============================ hooks ============================
