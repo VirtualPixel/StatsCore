@@ -2,6 +2,10 @@
 
 A stat-tracking library for R.E.P.O. mods. Define a stat once, then read and write it through a typed handle. StatsCore handles the parts every scorekeeping mod gets wrong: multiplayer sync, lifetime resets that follow the game's real scene flow, on-disk persistence, and querying history by day. It also ships a built-in pack of player stats any mod can read without writing a single tracker.
 
+> **A note from Vippy**
+>
+> After way too long of a break, I'm finally back and working on these again :D Every one of my mods just got a full pass: bugs fixed, reports read, a few things I'd always meant to do. New builds and fixes land in [Vippy's Discord](https://discord.gg/kKqhck2NrP) before they hit Thunderstore, so come hang out. Thanks for sticking around.
+
 StatsCore is a library. On its own it quietly records the built-in pack; its real job is to be a dependency for other mods. A drinking-game mod, an end-of-run scoreboard, a "reward the unluckiest Semibot" mod: all of them just call into StatsCore instead of reinventing the bookkeeping.
 
 A screen to browse your stats in-game is coming in a later release. This one is the engine underneath it.
@@ -178,12 +182,22 @@ Anything keyed by enemy name resolves through the game's own `enemyName`, so it 
 
 Names are slot keys, and slot keys frame both the save file and the sync wire format, so `| = ; , :` and whitespace controls are folded to `_` on the way in. An enemy a content mod calls `Slow=Mouth` reads back as `Slow_Mouth`. Ordinary names are untouched.
 
-## Contact
+## Come hang out
 
-| Purpose | Where |
+I'm Vippy. I make R.E.P.O. mods and I read every bug report.
+
+| | |
 |---|---|
-| Bug reports and suggestions | [GitHub Issues](https://github.com/VirtualPixel/StatsCore/issues) |
-| Questions, test builds, or just hanging out | [Vippy's Discord](https://discord.gg/kKqhck2NrP) |
-| R.E.P.O. modding in general | [R.E.P.O. Modding Server](https://discord.gg/9fDzZ9sk95) |
+| **[Vippy's Discord](https://discord.gg/kKqhck2NrP)** | Test builds land here before Thunderstore, you get a say in what comes next, and it's the fastest way to get a bug fixed. Come say hi. |
+| **[GitHub Issues](https://github.com/VirtualPixel/StatsCore/issues)** | Bug reports and ideas that deserve a paper trail. |
+| **[R.E.P.O. Modding Server](https://discord.gg/9fDzZ9sk95)** | The whole modding scene, not just me. |
+| **[More of my mods](https://thunderstore.io/c/repo/p/Vippy/)** | Everything else I've made for R.E.P.O. |
 
-Everything I make stays free. If one of these mods made your runs better and you feel like saying thanks, there is a [Ko-fi](https://ko-fi.com/vippydev).
+## Keep the mods coming
+
+Everything I make is free and stays free. Two ways to help if you feel like it, neither one expected:
+
+- **[Ko-fi](https://ko-fi.com/vippydev)**: buy me a coffee and your name goes on the supporters list in my Discord. Every coffee buys another evening on the next update.
+- **[BisectHosting](https://bisecthosting.com/vippy)**: hosting a server for Minecraft or anything else your crew plays? Code `vippy` takes 25% off, and I get a cut at no cost to you. It's where my own servers live.
+
+[![25% off BisectHosting servers with code vippy](https://www.bisecthosting.com/partners/custom-banners/71eecea6-f5bb-437d-ac56-f6fee4266193.png)](https://bisecthosting.com/vippy)

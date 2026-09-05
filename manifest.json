@@ -1,6 +1,6 @@
 {
   "name": "StatsCore",
-  "version_number": "0.1.0",
+  "version_number": "0.1.1",
   "website_url": "https://github.com/VirtualPixel/StatsCore",
   "description": "Stat-tracking library for REPO mods: define a stat, two-way multiplayer sync, career persistence, query-by-day, and a built-in pack of player stats.",
   "dependencies": [

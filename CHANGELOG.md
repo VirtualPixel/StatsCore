@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
 - Career rows belonging to a stat nobody defined this session are kept instead of dropped. Running once without a mod that owns some career stats used to erase its history on the next save; the same went for daily buckets when a stat never called `TrackDaily()`.
 - Daily buckets are the machine's local calendar day, not UTC. `GetToday` read UTC while `GetOnDay` read the raw date components off whatever you handed it, so the two disagreed between local midnight and UTC midnight. Buckets written by 0.1.0 can sit one day off; everything from here is consistent.
