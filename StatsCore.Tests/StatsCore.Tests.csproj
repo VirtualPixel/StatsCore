@@ -15,6 +15,7 @@
     <Compile Include="../StatsCore/Api/StatTypes.cs" Link="Linked/StatTypes.cs" />
     <Compile Include="../StatsCore/Runtime/CareerFile.cs" Link="Linked/CareerFile.cs" />
     <Compile Include="../StatsCore/Runtime/DayMath.cs" Link="Linked/DayMath.cs" />
+    <Compile Include="../StatsCore/Screen/StatFormatter.cs" Link="Linked/StatFormatter.cs" />
   </ItemGroup>
 
   <ItemGroup>

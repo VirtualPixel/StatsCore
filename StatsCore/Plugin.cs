@@ -1,4 +1,5 @@
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using UnityEngine;
 
@@ -8,6 +9,7 @@ namespace StatsCore
     // Session stats are host-authoritative and replicate to every client (late joiners get a snapshot);
     // Career stats persist locally to disk. Start with Stats.Define, or read the built-in pack via GameStats.
     [BepInPlugin("Vippy.StatsCore", "StatsCore", BuildInfo.Version)]
+    [BepInDependency("nickklmao.menulib", BepInDependency.DependencyFlags.SoftDependency)]
     public class StatsCorePlugin : BaseUnityPlugin
     {
         internal static StatsCorePlugin Instance { get; private set; } = null!;
@@ -26,6 +28,7 @@ namespace StatsCore
 
             GameStats.Register();   // the built-in REPO stat pack any mod can read
             StatsNet.Install();      // sync layer for Level/Run/Session lifetimes
+            if (Chainloader.PluginInfos.ContainsKey("nickklmao.menulib")) StatsScreenEntry.Install(Config);   // the stats screen
 
             Logger.LogInfo($"StatsCore v{BuildInfo.Version} loaded");
         }
