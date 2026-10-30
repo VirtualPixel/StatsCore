@@ -65,9 +65,12 @@ namespace StatsCore
         // single evening without that mod doesn't erase its history.
         internal static string SerializeTotals(
             IReadOnlyDictionary<string, Dictionary<string, CareerEntry>> live,
-            IReadOnlyDictionary<string, Dictionary<string, CareerEntry>> saved)
+            IReadOnlyDictionary<string, Dictionary<string, CareerEntry>> saved,
+            IEnumerable<string>? merged = null)
         {
             var sb = new StringBuilder(TotalsHeader).Append('\n');
+            if (merged != null)
+                foreach (string token in merged) sb.Append(MergedPrefix).Append(token).Append('\n');
             foreach (var stat in live)
                 foreach (var slot in stat.Value) AppendTotal(sb, stat.Key, slot.Key, slot.Value);
             foreach (var stat in saved)
@@ -77,6 +80,60 @@ namespace StatsCore
             }
             return sb.ToString();
         }
+
+        // ---- merging another profile's file in ----
+
+        private const string MergedPrefix = "# merged ";
+
+        // Which per-profile files have already been folded into this file. The marker travels inside the same
+        // file as the totals it produced, so a crash can never leave one without the other.
+        internal static HashSet<string> ParseMerged(IEnumerable<string> lines)
+        {
+            var found = new HashSet<string>();
+            foreach (string line in lines)
+                if (line.StartsWith(MergedPrefix, StringComparison.Ordinal) && line.Length > MergedPrefix.Length)
+                    found.Add(line.Substring(MergedPrefix.Length).Trim());
+            return found;
+        }
+
+        // Adds `source` into `target`: values are summed, the first-recorded time is the earlier of the two
+        // and the last-changed time the later. A zero time means unknown, so it never wins.
+        internal static void MergeTotals(
+            Dictionary<string, Dictionary<string, CareerEntry>> target,
+            IReadOnlyDictionary<string, Dictionary<string, CareerEntry>> source)
+        {
+            foreach (var stat in source)
+            {
+                if (!target.TryGetValue(stat.Key, out var slots)) { slots = new Dictionary<string, CareerEntry>(); target[stat.Key] = slots; }
+                foreach (var slot in stat.Value)
+                {
+                    if (!slots.TryGetValue(slot.Key, out var have)) { slots[slot.Key] = slot.Value; continue; }
+                    long sum = (long)have.Value + slot.Value.Value;
+                    have.Value = (int)Math.Max(int.MinValue, Math.Min(int.MaxValue, sum));
+                    have.FirstUtc = Earlier(have.FirstUtc, slot.Value.FirstUtc);
+                    have.LastUtc = Math.Max(have.LastUtc, slot.Value.LastUtc);
+                    slots[slot.Key] = have;
+                }
+            }
+        }
+
+        internal static void MergeDaily(
+            Dictionary<string, Dictionary<string, Dictionary<int, int>>> target,
+            IReadOnlyDictionary<string, Dictionary<string, Dictionary<int, int>>> source)
+        {
+            foreach (var stat in source)
+            {
+                if (!target.TryGetValue(stat.Key, out var slots)) { slots = new Dictionary<string, Dictionary<int, int>>(); target[stat.Key] = slots; }
+                foreach (var slot in stat.Value)
+                {
+                    if (!slots.TryGetValue(slot.Key, out var days)) { slots[slot.Key] = new Dictionary<int, int>(slot.Value); continue; }
+                    foreach (var day in slot.Value)
+                        days[day.Key] = days.TryGetValue(day.Key, out int existing) ? existing + day.Value : day.Value;
+                }
+            }
+        }
+
+        private static long Earlier(long a, long b) => a == 0 ? b : b == 0 ? a : Math.Min(a, b);
 
         private static void AppendTotal(StringBuilder sb, string key, string slot, CareerEntry entry) =>
             sb.Append(key).Append('|').Append(SanitizeSlot(slot)).Append('=')
