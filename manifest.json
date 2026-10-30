@@ -1,9 +1,10 @@
 {
   "name": "StatsCore",
-  "version_number": "0.1.1",
+  "version_number": "1.0.0",
   "website_url": "https://github.com/VirtualPixel/StatsCore",
-  "description": "Stat-tracking library for REPO mods: define a stat, two-way multiplayer sync, career persistence, query-by-day, and a built-in pack of player stats.",
+  "description": "Your stats in the main and pause menus: career, today, last 7 days and this run, sorted like a character sheet. Also the stat library other mods build on: sync, career saves, query by day.",
   "dependencies": [
-    "BepInEx-BepInExPack-5.4.2305"
+    "BepInEx-BepInExPack-5.4.2305",
+    "REPOModding-MenuLib-2.6.0"
   ]
 }

@@ -1,18 +1,32 @@
 # StatsCore
 
-A stat-tracking library for R.E.P.O. mods. Define a stat once, then read and write it through a typed handle. StatsCore handles the parts every scorekeeping mod gets wrong: multiplayer sync, lifetime resets that follow the game's real scene flow, on-disk persistence, and querying history by day. It also ships a built-in pack of player stats any mod can read without writing a single tracker.
+Everything R.E.P.O. keeps about you, on one screen. Open **Stats** from the main menu or the pause menu and see your career, today, the last 7 days and the run you are on, sorted into groups like a character sheet. Under the screen is a stat-tracking library other mods build on.
 
 > **A note from Vippy**
 >
 > After way too long of a break, I'm finally back and working on these again :D Every one of my mods just got a full pass: bugs fixed, reports read, a few things I'd always meant to do. New builds and fixes land in [Vippy's Discord](https://discord.gg/kKqhck2NrP) before they hit Thunderstore, so come hang out. Thanks for sticking around.
 
-StatsCore is a library. On its own it quietly records the built-in pack; its real job is to be a dependency for other mods. A drinking-game mod, an end-of-run scoreboard, a "reward the unluckiest Semibot" mod: all of them just call into StatsCore instead of reinventing the bookkeeping.
+## The stats screen
 
-A screen to browse your stats in-game is coming in a later release. This one is the engine underneath it.
+![The Stats button in the main menu, above Quit](https://raw.githubusercontent.com/VirtualPixel/StatsCore/main/media/main_menu.png)
+
+![The Career view, with Highlights and the Glory category](https://raw.githubusercontent.com/VirtualPixel/StatsCore/main/media/stats_page.png)
+
+Pick a view at the top: **Career**, **Today**, **Last 7 days** or **This run**. Narrow it to one category if you want, or leave it on All. Every stat gets a row with its value, grouped the way a character sheet would: Glory, Mobility, Expeditions, Misfortune, Recovery, Mischief. Time, distance and money are shown the way you would say them, so 11,220 seconds reads as 3h 07m and 12,400 meters as 12.4 km.
+
+Deaths by Enemy, Damage by Enemy and Map Visits open into a top list. Career starts with a Highlights block: when StatsCore started recording, the enemy that has killed you most and the level you land on most.
+
+It shows every stat any mod registers through StatsCore, so another mod's numbers appear on their own. If that mod gave the stat a name and category with `Describe`, it lands in the right group. If not, it still shows under Other.
+
+Both menu buttons can be switched off under Stats screen in the config. The screen uses MenuLib, so mod managers install that alongside StatsCore. Without MenuLib everything is still tracked, you just don't get the screen.
+
+## For mod authors
+
+StatsCore is also a library. On its own it quietly records the built-in pack; its real job is to be a dependency for other mods. A drinking-game mod, an end-of-run scoreboard, a "reward the unluckiest Semibot" mod: all of them just call into StatsCore instead of reinventing the bookkeeping. Anything you define shows up on the stats screen for free.
 
 ## Install
 
-Drop `StatsCore.dll` into `BepInEx/plugins`. Depends only on BepInEx. If you use a mod manager, add it as a dependency of your mod and the manager handles the rest.
+Drop `StatsCore.dll` into `BepInEx/plugins`. It needs BepInEx, plus MenuLib for the stats screen. If you use a mod manager, add it as a dependency of your mod and the manager handles the rest.
 
 ## Quick start
 
@@ -101,9 +115,11 @@ Career stats are **local** to each machine. Every player keeps their own record 
 
 ## Persistence and querying by day
 
-Career stats are written to `BepInEx/config/StatsCore/career.txt` (debounced, atomic write-then-swap, with first/last timestamps). You get the totals back automatically the moment you `Define` a Career stat. The swap keeps the version it replaced as `career.txt.bak`, and a file that has gone unreadable is loaded from that instead.
+Career stats are written to a `StatsCore` folder in the game's own per-user data folder (the one the game keeps your settings in), as `career.txt` (debounced, atomic write-then-swap, with first/last timestamps). You get the totals back automatically the moment you `Define` a Career stat. The swap keeps the version it replaced as `career.txt.bak`, and a file that has gone unreadable is loaded from that instead.
 
 Rows belonging to a stat nobody defined this session are copied through on every save, so uninstalling a mod for an evening doesn't erase the career numbers it owns.
+
+That folder is shared by every mod manager profile, so your career is one record no matter which profile you play from. Versions before 1.0.0 kept a separate file inside each profile; the first time a profile runs 1.0.0 its old file is added into the shared one (totals and daily history summed) and renamed to `career.txt.migrated`, so nothing is counted twice.
 
 Opt a Career stat into per-day history with `.TrackDaily()`. Each change is bucketed by the machine's local calendar day, persisted to `career-daily.txt`, and queryable:
 

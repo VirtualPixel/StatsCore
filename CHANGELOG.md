@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.0
+
+- The stats screen. Open Stats from the main menu or the pause menu, pick Career, Today, Last 7 days or This run, narrow it to a category if you want, and every stat is listed with its value, grouped like a character sheet. Time, distance and money read the way you would say them. Deaths by Enemy, Damage by Enemy and Map Visits open into a top list, and Career starts with a Highlights block: when StatsCore started recording, your most deadly enemy and your favorite level.
+- Your career is one record across every mod manager profile. It is saved in the game's own per-user data folder instead of inside each profile's config. The first time a profile runs this version its old career file is added into the shared one and renamed to career.txt.migrated, so profiles you played separately end up summed and nothing is counted twice.
+- It lists every stat any mod registers. A stat that never got a name or category still shows, under Other, with a name built from its key.
+- Both buttons can be switched off under Stats screen in the config. The screen needs MenuLib, which is a dependency now. Without it StatsCore tracks and syncs exactly as before.
+- The library API is unchanged since 0.1.x. This is 1.0.0 because it is the first version with something to look at.
+
+## 0.1.2
+
+- Updated for the 0.5 game build. The API is the same.
+
 ## 0.1.1
 
 - Career rows belonging to a stat nobody defined this session are kept instead of dropped. Running once without a mod that owns some career stats used to erase its history on the next save; the same went for daily buckets when a stat never called `TrackDaily()`.
